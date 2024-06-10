@@ -6,11 +6,11 @@ const THINGSBOARD_URL = 'http://iot.ceisufro.cl:8080';
 const USERNAME = 'v.aburto04@ufromail.cl';
 const PASSWORD = 'gt-m3710';
 const DEVICE_ID = '532a4ce0-1c2a-11ef-9ae0-45d10902f7b5';
-const DEVICE_TOKEN = 'dkerbmokdpt70rdxmw6e';
 
 let authToken = '';
 let movementTime = 0;
 let lastTimestamp = Date.now();
+let isMoving = false;
 let interval;
 
 // Autenticación y obtención del token de usuario
@@ -30,7 +30,7 @@ async function authenticate() {
 // Obtención de datos de telemetría del dispositivo
 async function getTelemetry() {
     try {
-        const response = await axios.get(`${THINGSBOARD_URL}/api/plugins/telemetry/DEVICE/${DEVICE_ID}/values/timeseries?keys=accelerometer`, {
+        const response = await axios.get(`${THINGSBOARD_URL}/api/plugins/telemetry/DEVICE/${DEVICE_ID}/values/timeseries?keys=moving`, {
             headers: { 'X-Authorization': `Bearer ${authToken}` }
         });
         return response.data;
@@ -42,26 +42,37 @@ async function getTelemetry() {
 
 // Cálculo del tiempo en movimiento
 function calculateMovementTime(telemetry) {
-    telemetry.accelerometer.forEach(entry => {
+    if (!telemetry.moving) {
+        console.log('No se encontraron datos de movimiento.');
+        return;
+    }
+
+    telemetry.moving.forEach(entry => {
         const timestamp = entry.ts;
-        const accelData = entry.value;
-
-        const x = parseFloat(accelData.x);
-        const y = parseFloat(accelData.y);
-        const z = parseFloat(accelData.z);
-        const magnitude = Math.sqrt(x * x + y * y + z * z);
-
-        const moving = magnitude < 0.8 || magnitude > 1.2;
+        const moving = entry.value === 'true';
 
         if (moving) {
-            if (lastTimestamp) {
+            if (isMoving) {
+                // Si el dispositivo ya está en movimiento, acumular el tiempo
                 movementTime += (timestamp - lastTimestamp);
+            } else {
+                // Si el dispositivo empieza a moverse, actualizar el estado
+                isMoving = true;
+            }
+            lastTimestamp = timestamp;
+        } else {
+            if (isMoving) {
+                // Si el dispositivo deja de moverse, actualizar el estado
+                isMoving = false;
+                lastTimestamp = timestamp;
             }
         }
-        lastTimestamp = timestamp;
     });
+
+    console.log(`Tiempo de movimiento acumulado: ${movementTime / 1000} segundos.`);
 }
 
+// Función para obtener y calcular datos periódicamente
 async function fetchAndCalculate() {
     const telemetry = await getTelemetry();
     if (telemetry) {
@@ -71,10 +82,12 @@ async function fetchAndCalculate() {
     }
 }
 
+// Ruta para mostrar el tiempo de movimiento acumulado
 app.get('/movement-time', (req, res) => {
     res.send(`El dispositivo ha estado en movimiento por ${movementTime / 1000} segundos.`);
 });
 
+// Inicio del servidor y configuración de intervalos
 app.listen(3000, async () => {
     console.log('Servidor escuchando en el puerto 3000');
     await authenticate();
