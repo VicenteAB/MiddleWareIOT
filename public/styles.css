@@ -1,0 +1,31 @@
+body {
+    margin: 0;
+    height: 100vh;
+    background: 
+        linear-gradient(rgba(0, 0, 0, 0.753), rgba(0, 0, 0, 0.479)), /* Gradiente semitransparente */
+        url('https://cdn.aarp.net/content/dam/aarp/health/healthy-living/2020/02/1140-female-doctor-female-patient-esp.jpg'); /* Ruta de la imagen de fondo */
+    background-size: cover; /* Ajusta la imagen para cubrir toda la pantalla */
+    background-position: center; /* Centra la imagen de fondo */
+    background-repeat: no-repeat; /* Evita que la imagen se repita */
+}
+
+.principal {
+    width: 80%;
+    max-width: 800px;
+    height: 50vh;
+    max-height: 300px;
+    border-radius: 20px;
+    margin-top: 5%;
+    margin-left: auto;
+    margin-bottom: auto;
+    margin-right: auto;
+    background-color: rgb(216, 216, 216) ;
+    display: flex;
+    justify-content: center; 
+    align-items: center;
+    text-align: center; 
+    z-index: 1; 
+}
+.content {
+    display: block; 
+}

@@ -1,6 +1,11 @@
 const express = require('express');
 const axios = require('axios');
+const http = require('http');
+const socketIo = require('socket.io');
+
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
 
 const THINGSBOARD_URL = 'http://iot.ceisufro.cl:8080';
 const USERNAME = 'v.aburto04@ufromail.cl';
@@ -11,7 +16,6 @@ let authToken = '';
 let movementTime = 0;
 let lastTimestamp = Date.now();
 let isMoving = false;
-let interval;
 
 // Autenticación y obtención del token de usuario
 async function authenticate() {
@@ -72,24 +76,33 @@ function calculateMovementTime(telemetry) {
     console.log(`Tiempo de movimiento acumulado: ${movementTime / 1000} segundos.`);
 }
 
-// Función para obtener y calcular datos periódicamente
+// Función para obtener y calcular datos periódicamente y emitir eventos a través de WebSockets
 async function fetchAndCalculate() {
     const telemetry = await getTelemetry();
     if (telemetry) {
         calculateMovementTime(telemetry);
+        io.emit('movement-time', { movementTime: movementTime / 1000 });
     } else {
         await authenticate(); // Reautenticación si falla la obtención de datos
     }
 }
 
-// Ruta para mostrar el tiempo de movimiento acumulado
-app.get('/movement-time', (req, res) => {
-    res.send(`El dispositivo ha estado en movimiento por ${movementTime / 1000} segundos.`);
+// Configuración de WebSocket
+io.on('connection', (socket) => {
+    console.log('Nuevo cliente conectado');
+    socket.emit('movement-time', { movementTime: movementTime / 1000 });
+
+    socket.on('disconnect', () => {
+        console.log('Cliente desconectado');
+    });
 });
 
+// Pa que pesque el html en public
+app.use(express.static('public'));
+
 // Inicio del servidor y configuración de intervalos
-app.listen(3000, async () => {
+server.listen(3000, async () => {
     console.log('Servidor escuchando en el puerto 3000');
     await authenticate();
-    interval = setInterval(fetchAndCalculate, 60000); // Intervalo de 1 minuto
+    setInterval(fetchAndCalculate, 60000); // Intervalo de 1 minuto
 });
