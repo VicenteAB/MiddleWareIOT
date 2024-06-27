@@ -104,5 +104,5 @@ app.use(express.static('public'));
 server.listen(3000, async () => {
     console.log('Servidor escuchando en el puerto 3000');
     await authenticate();
-    setInterval(fetchAndCalculate, 15000); // Intervalo de 1 minuto
+    setInterval(fetchAndCalculate, 3000); // Intervalo de 1 minuto
 });
